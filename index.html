@@ -313,10 +313,17 @@ async function loadData(){
     step(3);
     const [cd,id2] = await Promise.all([cr.json(),ir.json()]);
     if(cd.error) throw new Error(cd.error.message);
+    if(id2.error) throw new Error('Insights API: ' + id2.error.message);
     step(4);
+    console.log('Campaigns:', cd.data?.length, 'Insights:', id2.data?.length);
+    console.log('Sample insight:', JSON.stringify(id2.data?.[0]));
     const iMap={};
     (id2.data||[]).forEach(i=>{iMap[i.campaign_id]=i;});
-    ALL=(cd.data||[]).map(c=>{
+    // Only include campaigns that have insight data for selected period
+    const campaignsToMap = (dpSel==='custom'||dpSel!=='maximum')
+      ? (cd.data||[]).filter(c => iMap[c.id]) // Only campaigns with data in this period
+      : (cd.data||[]);
+    ALL=campaignsToMap.map(c=>{
       const ins=iMap[c.id]||{};
       const spend=parseFloat(ins.spend||0),imp=parseInt(ins.impressions||0),reach=parseInt(ins.reach||0);
       const clicks=parseInt(ins.clicks||0),ctr=parseFloat(ins.ctr||0),ilc=parseInt(ins.inline_link_clicks||0);
@@ -350,6 +357,12 @@ function render(){
   const sf=document.getElementById('statusFilter')?.value||'ALL';
   const so=document.getElementById('sortFilter')?.value||'spend';
   let data=sf==='ALL'?ALL:ALL.filter(c=>c.status===sf);
+  // For custom/specific date ranges, hide campaigns with zero spend
+  const dpSel3=document.getElementById('dateFilter')?.value||'maximum';
+  if(dpSel3!=='maximum'){
+    const withSpend=data.filter(c=>c.spend>0);
+    if(withSpend.length>0) data=withSpend; // Only filter if we have some data
+  }
   data=[...data].sort((a,b)=>so==='spend'?b.spend-a.spend:so==='results'?b.results-a.results:so==='cpr'?(a.cpr||999999)-(b.cpr||999999):b.ctr-a.ctr);
   renderKPIs(data); renderTable(data); renderCharts(data); renderBestWorst(data); renderAlerts(data);
   document.getElementById('campChip').textContent=data.length+' campaigns';
