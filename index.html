@@ -351,17 +351,17 @@ function renderKPIs(data){
   const act=ALL.filter(c=>c.status==='ACTIVE').length;
   document.getElementById('kpiGrid').innerHTML=`
     <div class="kpi ${ctr>=1?'g':'r'}">
-      <div class="kpi-lbl">Avg CTR</div><div class="kpi-val" style="color:${ctr>=1?GRN:RED}">${ctr.toFixed(2)}%</div>
+      <div class="kpi-lbl">Avg CTR</div><div class="kpi-val" style="color:${ctr>=1?GREEN:RED}">${ctr.toFixed(2)}%</div>
       <div class="kpi-sub">Benchmark 1%</div>
-      <span class="badge" style="background:${ctr>=1?GRN:RED}20;color:${ctr>=1?GRN:RED}">${ctr>=1?'✓ HEALTHY':'⚠ LOW'}</span>
+      <span class="badge" style="background:${ctr>=1?GREEN:RED}20;color:${ctr>=1?GREEN:RED}">${ctr>=1?'✓ HEALTHY':'⚠ LOW'}</span>
     </div>
     <div class="kpi"><div class="kpi-lbl">Total Spend</div><div class="kpi-val" style="color:${GOLD}">₹${fmt(ts)}</div><div class="kpi-sub">All campaigns</div></div>
     <div class="kpi"><div class="kpi-lbl">Cost/Result</div><div class="kpi-val" style="color:${GOLD}">₹${cpr.toFixed(2)}</div><div class="kpi-sub">Blended avg</div></div>
-    <div class="kpi g"><div class="kpi-lbl">Total Leads</div><div class="kpi-val" style="color:${GRN}">${fmtN(tl)}</div><div class="kpi-sub">Lead campaigns only</div>${tl>0?`<span class="badge" style="background:${GRN}20;color:${GRN}">✓ TRACKED</span>`:`<span class="badge" style="background:rgba(122,135,168,0.15);color:#7a87a8">—</span>`}</div>
-    <div class="kpi ${tcpl>0&&tcpl<100?'g':'r'}"><div class="kpi-lbl">Avg CPL</div><div class="kpi-val" style="color:${tcpl>0&&tcpl<100?GRN:tcpl>0?RED:GOLD}">₹${tcpl>0?tcpl.toFixed(2):'—'}</div><div class="kpi-sub">Cost per lead</div>${tcpl>0?`<span class="badge" style="background:${tcpl<100?GRN:RED}20;color:${tcpl<100?GRN:RED}">${tcpl<100?'✓ HEALTHY':'⚠ HIGH'}</span>`:''}</div>
-    <div class="kpi b"><div class="kpi-lbl">Total Results</div><div class="kpi-val" style="color:${BLU}">${fmtN(tr)}</div><div class="kpi-sub">All objectives</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Total Leads</div><div class="kpi-val" style="color:${GREEN}">${fmtN(tl)}</div><div class="kpi-sub">Lead campaigns only</div>${tl>0?`<span class="badge" style="background:${GREEN}20;color:${GREEN}">✓ TRACKED</span>`:`<span class="badge" style="background:rgba(122,135,168,0.15);color:#7a87a8">—</span>`}</div>
+    <div class="kpi ${tcpl>0&&tcpl<100?'g':'r'}"><div class="kpi-lbl">Avg CPL</div><div class="kpi-val" style="color:${tcpl>0&&tcpl<100?GREEN:tcpl>0?RED:GOLD}">₹${tcpl>0?tcpl.toFixed(2):'—'}</div><div class="kpi-sub">Cost per lead</div>${tcpl>0?`<span class="badge" style="background:${tcpl<100?GREEN:RED}20;color:${tcpl<100?GREEN:RED}">${tcpl<100?'✓ HEALTHY':'⚠ HIGH'}</span>`:''}</div>
+    <div class="kpi b"><div class="kpi-lbl">Total Results</div><div class="kpi-val" style="color:${BLUE}">${fmtN(tr)}</div><div class="kpi-sub">All objectives</div></div>
     <div class="kpi"><div class="kpi-lbl">Total Reach</div><div class="kpi-val">${fmtN(treach)}</div><div class="kpi-sub">${fmtN(ti)} impressions</div></div>
-    <div class="kpi g"><div class="kpi-lbl">Active</div><div class="kpi-val" style="color:${GRN}">${act}</div><div class="kpi-sub">of ${ALL.length} total</div></div>`;
+    <div class="kpi g"><div class="kpi-lbl">Active</div><div class="kpi-val" style="color:${GREEN}">${act}</div><div class="kpi-sub">of ${ALL.length} total</div></div>`;
 }
 
 function renderTable(data){
