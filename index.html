@@ -602,11 +602,17 @@ function toggleDrawer(el){
 }
 
 async function loadCreatives(campId,campName,drawer){
-  const tok=getToken(),dp=document.getElementById('dateFilter')?.value||'maximum';
+  const tok=getToken();
+  const dpSelC=document.getElementById('dateFilter')?.value||'maximum';
+  const sinceC=document.getElementById('dateFrom')?.value||'';
+  const untilC=document.getElementById('dateTo')?.value||'';
+  const dateParamC=(dpSelC==='custom'&&sinceC&&untilC)
+    ? 'time_range[since]='+sinceC+'&time_range[until]='+untilC
+    : 'date_preset='+(dpSelC==='custom'?'maximum':dpSelC);
   try{
     const [ar,ir]=await Promise.all([
       fetch(`${GRAPH}/act_${ACCOUNT}/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
-      fetch(`${GRAPH}/act_${ACCOUNT}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParam2}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
+      fetch(`${GRAPH}/act_${ACCOUNT}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParamC}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
     ]);
     const [ad,ins]=await Promise.all([ar.json(),ir.json()]);
     if(ad.error)throw new Error(ad.error.message);
