@@ -346,6 +346,25 @@ async function loadData(){
   show('loading'); step(1);
   const tok = getToken();
   const dpSel = document.getElementById('dateFilter')?.value || 'maximum';
+
+  // Check cache — skip API call if data is less than 60 mins old
+  const cacheKey = 'jc_cache_' + dpSel;
+  const cached = sessionStorage.getItem(cacheKey);
+  if(cached){
+    try{
+      const {data, ts} = JSON.parse(cached);
+      const ageMin = (Date.now() - ts) / 60000;
+      if(ageMin < 60){
+        console.log('Using cached data (' + ageMin.toFixed(1) + ' mins old)');
+        const {campData, insData} = data;
+        processData(campData, insData);
+        document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date(ts).toLocaleTimeString('en-IN') + ' (cached)';
+        show('page');
+        document.getElementById('footer').style.display = 'block';
+        return;
+      }
+    }catch(e){ sessionStorage.removeItem(cacheKey); }
+  }
   const since = document.getElementById('dateFrom')?.value || '';
   const until = document.getElementById('dateTo')?.value || '';
 
@@ -370,6 +389,13 @@ async function loadData(){
     if(id2.error) throw new Error('Insights API: ' + id2.error.message);
     step(4);
     console.log('Campaigns:', cd.data?.length, 'Insights:', id2.data?.length);
+    // Save to cache
+    try{
+      sessionStorage.setItem('jc_cache_'+dpSel, JSON.stringify({
+        data: {campData: cd, insData: id2},
+        ts: Date.now()
+      }));
+    }catch(e){}
     console.log('Sample insight:', JSON.stringify(id2.data?.[0]));
     const iMap={};
     (id2.data||[]).forEach(i=>{iMap[i.campaign_id]=i;});
