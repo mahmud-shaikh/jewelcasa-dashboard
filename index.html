@@ -767,45 +767,25 @@ async function loadDTData(){
   const since = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
   try {
-    // Fetch via direct call first (works on GitHub Pages), fallback to Claude proxy
-    async function dtFetch(url, headers){
-      try {
-        const r = await fetch(url, { headers });
-        if(!r.ok) throw new Error('HTTP '+r.status);
-        return await r.json();
-      } catch(e) {
-        // Fallback: use Claude API as proxy
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            model:'claude-sonnet-4-6', max_tokens:4000,
-            tools:[{type:'web_search_20250305',name:'web_search'}],
-            messages:[{role:'user',content:'Fetch this URL with Authorization header "'+headers['Authorization']+'" and return ONLY the raw JSON response. No explanation. URL: '+url}]
-          })
-        });
-        const d = await res.json();
-        for(const b of (d.content||[])){
-          if(b.type==='text'&&b.text){
-            const m=b.text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-            if(m){try{return JSON.parse(m[0]);}catch(e){}}
-          }
-        }
-        throw new Error('Could not fetch via proxy');
-      }
+    // Read data from dt_data.json — updated hourly by GitHub Actions (no CORS issues)
+    const dataRes = await fetch('./dt_data.json?t=' + Date.now());
+    if (!dataRes.ok) throw new Error('dt_data.json not found. Run GitHub Actions workflow first.');
+    const dtData = await dataRes.json();
+
+    // Parse chats
+    const rawChats = dtData.chats || {};
+    dtChats = rawChats.data || rawChats.chats || (Array.isArray(rawChats) ? rawChats : []);
+    if (!Array.isArray(dtChats)) dtChats = Object.values(dtChats).flat().filter(c => typeof c === 'object');
+
+    // Parse broadcasts
+    const rawBc = dtData.broadcasts || {};
+    dtBroadcasts = rawBc.data || rawBc.groups || rawBc.broadcastGroups || (Array.isArray(rawBc) ? rawBc : []);
+    if (!Array.isArray(dtBroadcasts)) dtBroadcasts = [];
+
+    // Show when data was last fetched by GitHub Actions
+    if (dtData.lastUpdated) {
+      document.getElementById('dtLastUpdated').textContent = 'Data from: ' + new Date(dtData.lastUpdated).toLocaleString('en-IN');
     }
-
-    const dtHeaders = { 'Authorization': DT_KEY, 'Content-Type': 'application/json' };
-
-    // Fetch chat list (inbox)
-    const chatData = await dtFetch(`${DT_BASE}/whatsapp/chat/list?wabaNumber=${encodeURIComponent(DT_WABA)}&limit=50`, dtHeaders);
-    dtChats = chatData.data || chatData.chats || (Array.isArray(chatData)?chatData:[]);
-    if(!Array.isArray(dtChats)) dtChats = Object.values(dtChats).flat().filter(c=>typeof c==='object');
-
-    // Fetch broadcast groups
-    const bcData = await dtFetch(`${DT_BASE}/whatsapp/broadcastGroup/list?wabaNumber=${encodeURIComponent(DT_WABA)}&limit=20`, dtHeaders);
-    dtBroadcasts = bcData.data || bcData.groups || (Array.isArray(bcData)?bcData:[]);
-    if(!Array.isArray(dtBroadcasts)) dtBroadcasts = [];
 
     // Render KPIs and charts from raw data
     renderDTKPIs();
