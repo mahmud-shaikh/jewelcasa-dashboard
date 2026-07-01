@@ -5,12 +5,17 @@ on:
     - cron: '0 * * * *'  # Every hour
   workflow_dispatch:       # Manual trigger button in GitHub
 
+permissions:
+  contents: write          # Required to push dt_data.json back to repo
+
 jobs:
   fetch-data:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch DoubleTick chat list
         run: |
@@ -18,7 +23,9 @@ jobs:
             -H "Authorization: ${{ secrets.DT_KEY }}" \
             -H "Content-Type: application/json" \
             "https://public.doubletick.io/whatsapp/chat/list?wabaNumber=%2B917738264158&limit=100" \
-            > dt_chats.json
+            -o dt_chats_raw.json
+          echo "Chat list fetched"
+          cat dt_chats_raw.json | head -c 200
 
       - name: Fetch DoubleTick broadcast groups
         run: |
@@ -26,26 +33,43 @@ jobs:
             -H "Authorization: ${{ secrets.DT_KEY }}" \
             -H "Content-Type: application/json" \
             "https://public.doubletick.io/whatsapp/broadcastGroup/paginated?wabaNumber=%2B917738264158&limit=20" \
-            >> dt_broadcasts_raw.json
-          # Wrap into expected format
-          echo '{"broadcasts":' > dt_broadcasts.json
-          cat dt_broadcasts_raw.json >> dt_broadcasts.json
-          echo '}' >> dt_broadcasts.json
+            -o dt_broadcasts_raw.json
+          echo "Broadcasts fetched"
+          cat dt_broadcasts_raw.json | head -c 200
 
-      - name: Merge into single data file
+      - name: Merge into single dt_data.json
         run: |
-          echo '{' > dt_data.json
-          echo '"chats":' >> dt_data.json
-          cat dt_chats.json >> dt_data.json
-          echo ',"broadcasts":' >> dt_data.json
-          cat dt_broadcasts_raw.json >> dt_data.json
-          echo ',"lastUpdated":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"' >> dt_data.json
-          echo '}' >> dt_data.json
+          python3 << 'PYEOF'
+          import json, datetime
 
-      - name: Commit and push data
+          try:
+              with open('dt_chats_raw.json') as f:
+                  chats = json.load(f)
+          except:
+              chats = {}
+
+          try:
+              with open('dt_broadcasts_raw.json') as f:
+                  broadcasts = json.load(f)
+          except:
+              broadcasts = {}
+
+          output = {
+              "chats": chats,
+              "broadcasts": broadcasts,
+              "lastUpdated": datetime.datetime.utcnow().isoformat() + "Z"
+          }
+
+          with open('dt_data.json', 'w') as f:
+              json.dump(output, f)
+
+          print("dt_data.json created successfully")
+          PYEOF
+
+      - name: Commit and push dt_data.json
         run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add dt_data.json dt_chats.json dt_broadcasts.json
-          git diff --staged --quiet || git commit -m "Auto: update DoubleTick data $(date -u)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dt_data.json
+          git diff --staged --quiet && echo "No changes" || git commit -m "chore: update DoubleTick data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
