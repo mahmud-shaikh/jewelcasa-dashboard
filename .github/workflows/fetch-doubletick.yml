@@ -1,0 +1,51 @@
+name: Fetch DoubleTick Data
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:       # Manual trigger button in GitHub
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch DoubleTick chat list
+        run: |
+          curl -s \
+            -H "Authorization: ${{ secrets.DT_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://public.doubletick.io/whatsapp/chat/list?wabaNumber=%2B917738264158&limit=100" \
+            > dt_chats.json
+
+      - name: Fetch DoubleTick broadcast groups
+        run: |
+          curl -s \
+            -H "Authorization: ${{ secrets.DT_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://public.doubletick.io/whatsapp/broadcastGroup/paginated?wabaNumber=%2B917738264158&limit=20" \
+            >> dt_broadcasts_raw.json
+          # Wrap into expected format
+          echo '{"broadcasts":' > dt_broadcasts.json
+          cat dt_broadcasts_raw.json >> dt_broadcasts.json
+          echo '}' >> dt_broadcasts.json
+
+      - name: Merge into single data file
+        run: |
+          echo '{' > dt_data.json
+          echo '"chats":' >> dt_data.json
+          cat dt_chats.json >> dt_data.json
+          echo ',"broadcasts":' >> dt_data.json
+          cat dt_broadcasts_raw.json >> dt_data.json
+          echo ',"lastUpdated":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"' >> dt_data.json
+          echo '}' >> dt_data.json
+
+      - name: Commit and push data
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add dt_data.json dt_chats.json dt_broadcasts.json
+          git diff --staged --quiet || git commit -m "Auto: update DoubleTick data $(date -u)"
+          git push
