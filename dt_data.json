@@ -1,1 +1,1 @@
-{"chats": {"message": "Cannot GET /v2/p/whatsapp/chat/list?wabaNumber=%2B917738264158&limit=100", "error": "Not Found", "statusCode": 404}, "broadcasts": {"message": "Cannot GET /v2/p/whatsapp/broadcastGroup/paginated?wabaNumber=%2B917738264158&limit=20", "error": "Not Found", "statusCode": 404}, "lastUpdated": "2026-07-10T11:38:39.187878Z"}
+{"chats": {"reason": "FORBIDDEN"}, "broadcasts": {"reason": "FORBIDDEN"}, "lastUpdated": "2026-07-10T13:47:27.007854Z"}
