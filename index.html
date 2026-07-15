@@ -331,14 +331,25 @@ async function loadData(){
 
   try{
     step(2);
-    const [cr,ir] = await Promise.all([
-      fetch(`${GRAPH}/act_${ACCOUNT}/campaigns?fields=id,name,status,effective_status,objective,created_time&limit=500&access_token=${tok}`),
-      fetch(`${GRAPH}/act_${ACCOUNT}/insights?fields=campaign_id,spend,impressions,reach,clicks,ctr,actions,cost_per_action_type,inline_link_clicks,inline_link_click_ctr&level=campaign&${dateParam}&limit=500&access_token=${tok}`)
-    ]);
+    // Fetch from BOTH ad accounts simultaneously
+    const ALL_ACCOUNTS = ['284575610666153', '1768682786866998'];
+    const allFetches = ALL_ACCOUNTS.map(acct => Promise.all([
+      fetch(`${GRAPH}/act_${acct}/campaigns?fields=id,name,status,effective_status,objective,created_time&limit=500&access_token=${tok}`),
+      fetch(`${GRAPH}/act_${acct}/insights?fields=campaign_id,spend,impressions,reach,clicks,ctr,actions,cost_per_action_type,inline_link_clicks,inline_link_click_ctr&level=campaign&${dateParam}&limit=500&access_token=${tok}`)
+    ]));
+    const allResults = await Promise.all(allFetches);
+    const allParsed = await Promise.all(allResults.map(([cr,ir]) => Promise.all([cr.json(), ir.json()])));
+    // Merge from all accounts
+    const cr = { json: async () => ({'data': []}) };
+    const ir = { json: async () => ({'data': []}) };
+    const cd = { data: [] };
+    const id2 = { data: [] };
+    for(const [campData, insData] of allParsed){
+      if(!campData.error && campData.data) cd.data.push(...campData.data);
+      if(!insData.error && insData.data) id2.data.push(...insData.data);
+    }
+    if(!cd.data.length) throw new Error('No campaign data returned from any account');
     step(3);
-    const [cd,id2] = await Promise.all([cr.json(),ir.json()]);
-    if(cd.error) throw new Error(cd.error.message);
-    if(id2.error) throw new Error('Insights API: ' + id2.error.message);
     step(4);
     console.log('Campaigns:', cd.data?.length, 'Insights:', id2.data?.length);
     // Save to cache
