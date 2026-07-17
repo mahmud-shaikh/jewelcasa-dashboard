@@ -36,7 +36,7 @@ body{background:var(--navy);color:var(--white);font-family:'Segoe UI',system-ui,
 .token-bar input:focus{border-color:var(--gold)}
 
 /* LOADING */
-.loading{display:flex;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:14px}
+.loading{display:none;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:14px}
 .spinner{width:36px;height:36px;border:2.5px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.75s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .steps{display:flex;flex-direction:column;gap:6px;margin-top:6px}
@@ -145,7 +145,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
   <div class="hright">
     <span class="ts" id="ts"></span>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <button class="btn btn-ghost" onclick="toggleTokenBar()">⚙ Token</button>
+    <button class="btn btn-ghost" onclick="toggleTokenBar()" style="position:relative;z-index:9999">⚙ Token</button>
     <button class="btn btn-gold" onclick="loadData()">↻ Refresh</button>
   </div>
 </header>
@@ -287,6 +287,11 @@ function toggleTokenBar(){ const b=document.getElementById('tokenBar'); b.style.
 function applyToken(){ const t=document.getElementById('newTokenInput').value.trim(); if(t){setToken(t);toggleTokenBar();loadData();} }
 
 window.onload = function(){
+  // Set initial display states explicitly
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('mainPage').style.display = 'none';
+
   // Set a 15-second timeout — if still loading, show error with token prompt
   window._loadTimeout = setTimeout(function(){
     const ls = document.getElementById('loadingScreen');
