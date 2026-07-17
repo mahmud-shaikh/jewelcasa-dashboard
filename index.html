@@ -36,7 +36,7 @@ body{background:var(--navy);color:var(--white);font-family:'Segoe UI',system-ui,
 .token-bar input:focus{border-color:var(--gold)}
 
 /* LOADING */
-.loading{display:flex;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:14px}
+.loading{display:none;align-items:center;justify-content:center;min-height:80vh;flex-direction:column;gap:14px}
 .spinner{width:36px;height:36px;border:2.5px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.75s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .steps{display:flex;flex-direction:column;gap:6px;margin-top:6px}
@@ -130,6 +130,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
 /* AGENT TABLE */
 .agent-bar{height:6px;background:rgba(201,168,76,0.1);border-radius:3px;overflow:hidden;margin-top:4px}
 .agent-fill{height:100%;background:var(--gold);border-radius:3px;transition:width 0.5s}
+.cr-card:hover{border-color:#C9A84C!important}
 </style>
 </head>
 <body>
@@ -145,7 +146,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
   <div class="hright">
     <span class="ts" id="ts"></span>
     <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <button class="btn btn-ghost" onclick="toggleTokenBar()">⚙ Token</button>
+    <button class="btn btn-ghost" onclick="toggleTokenBar()" style="position:relative;z-index:9999">⚙ Token</button>
     <button class="btn btn-gold" onclick="loadData()">↻ Refresh</button>
   </div>
 </header>
@@ -153,7 +154,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
 
 <div class="token-bar" id="tokenBar">
   <input type="password" id="newTokenInput" placeholder="Paste new Meta access token here..."/>
-  <button class="btn btn-gold" onclick="applyToken()">Save & Refresh</button>
+  <button class="btn btn-gold" onclick="applyTok()">Save & Refresh</button>
   <button class="btn btn-ghost" onclick="toggleTokenBar()">Cancel</button>
 </div>
 
@@ -255,45 +256,35 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
 
 <footer id="footer">JewelCasa Pvt Ltd · contact@jewelcasa.com · Meta Graph API · <span id="footerTs"></span></footer>
 
-<script>
-// ── CONFIG ──
+<script>// ── GLOBAL CONFIG ──
+const DEFAULT_TOKEN = 'EAASytHgol70BRwXsGFuP3NETZApwaBBJWrEHQSv5lOonZC9WMPLZCSsuTMv8DA7tSak1LUaP7LfIRZBKDazw2f6qsNZAe6B1waGXXMvBJnUAaP1JrXMqZC6eJdLWogFNxZALTrDeV1NpqcTjGZCiRs8m5pnpUerZAVODpYgXnoX1vuzAQsYYmijHh2GL3v0mlO6IE'; // Paste your 60-day token here
 const ACCOUNT = '284575610666153';
-const DEFAULT_TOKEN = 'EAASytHgol70BRwXsGFuP3NETZApwaBBJWrEHQSv5lOonZC9WMPLZCSsuTMv8DA7tSak1LUaP7LfIRZBKDazw2f6qsNZAe6B1waGXXMvBJnUAaP1JrXMqZC6eJdLWogFNxZALTrDeV1NpqcTjGZCiRs8m5pnpUerZAVODpYgXnoX1vuzAQsYYmijHh2GL3v0mlO6IE';
+const ALL_ACCOUNTS = ['284575610666153', '1768682786866998'];
 const GRAPH = 'https://graph.facebook.com/v19.0';
-const GOLD='#C9A84C',GREEN='#3dba7c',RED='#e05252',BLUE='#5b8dee';
+const GOLD='#C9A84C', GREEN='#3dba7c', RED='#e05252', BLUE='#5b8dee';
 
 const OBJ_MAP = {
-  OUTCOME_LEADS:['lead','onsite_conversion.lead_grouped'],LEAD_GENERATION:['lead','onsite_conversion.lead_grouped'],
+  OUTCOME_LEADS:['lead','onsite_conversion.lead_grouped'],
+  LEAD_GENERATION:['lead','onsite_conversion.lead_grouped'],
   OUTCOME_TRAFFIC:['link_click'],LINK_CLICKS:['link_click'],
-  OUTCOME_ENGAGEMENT:['post_engagement','page_engagement'],POST_ENGAGEMENT:['post_engagement','page_engagement'],
+  OUTCOME_ENGAGEMENT:['post_engagement','page_engagement'],
+  POST_ENGAGEMENT:['post_engagement','page_engagement'],
   OUTCOME_AWARENESS:['reach'],BRAND_AWARENESS:['reach'],REACH:['reach'],
   OUTCOME_SALES:['purchase'],CONVERSIONS:['purchase'],
   MESSAGES:['onsite_conversion.messaging_conversation_started_7d'],
   OUTCOME_MESSAGES:['onsite_conversion.messaging_conversation_started_7d'],
-  VIDEO_VIEWS:['video_view'],
+  VIDEO_VIEWS:['video_view']
 };
 const RT_LABEL = {
-  lead:'Lead','onsite_conversion.lead_grouped':'Lead',link_click:'Link Click',
-  post_engagement:'Engagement',page_engagement:'Engagement',reach:'Reach',purchase:'Purchase',
+  'lead':'Lead','onsite_conversion.lead_grouped':'Lead',
+  'link_click':'Link Click','post_engagement':'Engagement',
+  'page_engagement':'Engagement','reach':'Reach','purchase':'Purchase',
   'onsite_conversion.messaging_conversation_started_7d':'WA Chat',
-  video_view:'Video View',visit_instagram_profile:'IG Visit',
+  'video_view':'Video View'
 };
 
-let ALL=[], cStatus=null, cLeads=null, adCache={};
-
-function getToken(){ return sessionStorage.getItem('jc_tok')||DEFAULT_TOKEN; }
-function setToken(t){ sessionStorage.setItem('jc_tok',t); }
-function toggleTokenBar(){ const b=document.getElementById('tokenBar'); b.style.display=b.style.display==='flex'?'none':'flex'; }
-function applyToken(){ const t=document.getElementById('newTokenInput').value.trim(); if(t){setToken(t);toggleTokenBar();loadData();} }
-
-window.onload = loadData;
-
-function onDatePresetChange(){
-  const val = document.getElementById('dateFilter').value;
-  const cd = document.getElementById('customDates');
-  if(cd) cd.style.display = val==='custom' ? 'flex' : 'none';
-  if(val !== 'custom') loadData();
-}
+let ALL = [], adCache = {}, campAccount = ACCOUNT;
+let chartStatus = null, chartLeads = null;
 
 async function loadData(){
   show('loading'); step(1);
@@ -309,11 +300,30 @@ async function loadData(){
       const ageMin = (Date.now() - ts) / 60000;
       if(ageMin < 60){
         console.log('Using cached data (' + ageMin.toFixed(1) + ' mins old)');
-        const {campData, insData} = data;
-        processData(campData, insData);
-        document.getElementById('ts').textContent = 'Updated: ' + new Date(ts).toLocaleTimeString('en-IN') + ' (cached)';
+        // Re-process cached data inline
+        const cd=data.campData,id2=data.insData;
+        const iMap2={};(id2.data||[]).forEach(i=>{iMap2[i.campaign_id]=i;});
+        ALL=(cd.data||[]).map(c=>{
+          const ins=iMap2[c.id]||{};
+          const spend=parseFloat(ins.spend||0),imp=parseInt(ins.impressions||0),reach=parseInt(ins.reach||0);
+          const clicks=parseInt(ins.clicks||0),ctr=parseFloat(ins.ctr||0),ilc=parseInt(ins.inline_link_clicks||0);
+          const obj=c.objective||'',ats=OBJ_MAP[obj]||[];
+          let results=0,resultType='—',cpr=0;
+          if(ins.cost_per_action_type&&ats.length)for(const at of ats){const x=ins.cost_per_action_type.find(a=>a.action_type===at);if(x){cpr=parseFloat(x.value||0);resultType=RT_LABEL[at]||at;break;}}
+          if(ins.actions&&ats.length)for(const at of ats){const x=ins.actions.find(a=>a.action_type===at);if(x){results=parseInt(x.value||0);if(resultType==='—')resultType=RT_LABEL[at]||at;break;}}
+          if(obj==='OUTCOME_TRAFFIC'||obj==='LINK_CLICKS'){results=ilc||results;cpr=results>0?spend/results:0;resultType='Link Click';}
+          if(results===0&&ins.actions?.length){const top=ins.actions.reduce((m,a)=>parseInt(a.value||0)>parseInt(m.value||0)?a:m,ins.actions[0]);results=parseInt(top.value||0);resultType=RT_LABEL[top.action_type]||top.action_type.replace(/_/g,' ');cpr=results>0?spend/results:0;}
+          if(cpr===0&&results>0)cpr=spend/results;
+          let leads=0,cpl=0;
+          if(ins.actions){const la=ins.actions.find(a=>a.action_type==='lead'||a.action_type==='onsite_conversion.lead_grouped');if(la)leads=parseInt(la.value||0);}
+          if(ins.cost_per_action_type){const lca=ins.cost_per_action_type.find(a=>a.action_type==='lead'||a.action_type==='onsite_conversion.lead_grouped');if(lca)cpl=parseFloat(lca.value||0);}
+          if(cpl===0&&leads>0)cpl=spend/leads;
+          return{id:c.id,name:c.name,status:c.effective_status||c.status,objective:obj.replace('OUTCOME_','').replace(/_/g,' '),spend,impressions:imp,reach,clicks,ctr,results,resultType,cpr,leads,cpl,accountId:c._accountId||ACCOUNT};
+        });
+        render();
+        document.getElementById('ts').textContent='Updated: '+new Date(ts).toLocaleTimeString('en-IN')+' (cached)';
         show('page');
-        document.getElementById('footer').style.display = 'block';
+        document.querySelector('footer').style.display='block';
         return;
       }
     }catch(e){ sessionStorage.removeItem(cacheKey); }
@@ -330,6 +340,14 @@ async function loadData(){
     dateParam = 'date_preset=' + (dpSel === 'custom' ? 'maximum' : dpSel);
   }
 
+  // Check if token exists
+  if(!tok || tok.trim() === ''){
+    document.getElementById('errorTitle').textContent = '⚠ No Meta Access Token';
+    document.getElementById('errorSub').textContent = 'Click ⚙ Token button above to paste your Meta access token.';
+    show('error');
+    return;
+  }
+
   // Check cache first — skip API if data < 60 mins old
   const ck = 'jc_cache_' + dpSel + (dpSel==='custom'?since+until:'');
   try{
@@ -337,10 +355,31 @@ async function loadData(){
     if(cached){
       const {data,ts} = JSON.parse(cached);
       if((Date.now()-ts)/60000 < 60){
-        processData(data.campData, data.insData);
+        // Re-process cached data directly
+        const cd = data.campData, id2 = data.insData;
+        const iMap={};
+        (id2.data||[]).forEach(i=>{iMap[i.campaign_id]=i;});
+        ALL=(cd.data||[]).map(c=>{
+          const ins=iMap[c.id]||{};
+          const spend=parseFloat(ins.spend||0),imp=parseInt(ins.impressions||0),reach=parseInt(ins.reach||0);
+          const clicks=parseInt(ins.clicks||0),ctr=parseFloat(ins.ctr||0),ilc=parseInt(ins.inline_link_clicks||0);
+          const obj=c.objective||'',ats=OBJ_MAP[obj]||[];
+          let results=0,resultType='—',cpr=0;
+          if(ins.cost_per_action_type&&ats.length)for(const at of ats){const x=ins.cost_per_action_type.find(a=>a.action_type===at);if(x){cpr=parseFloat(x.value||0);resultType=RT_LABEL[at]||at;break;}}
+          if(ins.actions&&ats.length)for(const at of ats){const x=ins.actions.find(a=>a.action_type===at);if(x){results=parseInt(x.value||0);if(resultType==='—')resultType=RT_LABEL[at]||at;break;}}
+          if(obj==='OUTCOME_TRAFFIC'||obj==='LINK_CLICKS'){results=ilc||results;cpr=results>0?spend/results:0;resultType='Link Click';}
+          if(results===0&&ins.actions?.length){const top=ins.actions.reduce((m,a)=>parseInt(a.value||0)>parseInt(m.value||0)?a:m,ins.actions[0]);results=parseInt(top.value||0);resultType=RT_LABEL[top.action_type]||top.action_type.replace(/_/g,' ');cpr=results>0?spend/results:0;}
+          if(cpr===0&&results>0)cpr=spend/results;
+          let leads=0,cpl=0;
+          if(ins.actions){const la=ins.actions.find(a=>a.action_type==='lead'||a.action_type==='onsite_conversion.lead_grouped');if(la)leads=parseInt(la.value||0);}
+          if(ins.cost_per_action_type){const lca=ins.cost_per_action_type.find(a=>a.action_type==='lead'||a.action_type==='onsite_conversion.lead_grouped');if(lca)cpl=parseFloat(lca.value||0);}
+          if(cpl===0&&leads>0)cpl=spend/leads;
+          return{id:c.id,name:c.name,status:c.effective_status||c.status,objective:obj.replace('OUTCOME_','').replace(/_/g,' '),spend,impressions:imp,reach,clicks,ctr,results,resultType,cpr,leads,cpl,accountId:c._accountId||ACCOUNT};
+        });
+        render();
         document.getElementById('ts').textContent = 'Updated: ' + new Date(ts).toLocaleTimeString('en-IN') + ' (cached)';
         show('page');
-        document.getElementById('footer').style.display='block';
+        document.querySelector('footer').style.display='block';
         return;
       }
     }
@@ -406,6 +445,7 @@ async function loadData(){
       if(cpl===0&&leads>0)cpl=spend/leads;
       return{id:c.id,name:c.name,status:c.effective_status||c.status,objective:obj.replace('OUTCOME_','').replace(/_/g,' '),spend,impressions:imp,reach,clicks,ctr,results,resultType,cpr,leads,cpl,accountId:c._accountId||ACCOUNT};
     });
+    clearTimeout(window._loadTimeout);
     render();
     const now=new Date();
     document.getElementById('ts').textContent='Updated '+now.toLocaleTimeString('en-IN');
@@ -532,204 +572,156 @@ function renderBestWorst(data){
   const wc=data.filter(c=>c.cpr>0&&c.results>=3);
   const best=[...wc].sort((a,b)=>a.cpr-b.cpr).slice(0,5);
   const worst=[...wc].sort((a,b)=>b.cpr-a.cpr).slice(0,5);
-  const row=c=>`<tr class="bw-row" data-cid="${c.id}" onclick="openCreativeModal(this.getAttribute('data-cid'), this.querySelector('td').textContent.trim())" style="border-bottom:1px solid rgba(201,168,76,0.05);cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='rgba(201,168,76,0.04)'" onmouseout="this.style.background='transparent'">
-    <td style="padding:7px 8px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="${c.name}">
-      <span style="color:var(--muted);margin-right:4px;font-size:9px">📸</span>${c.name}
-    </td>
-    <td style="padding:7px 8px;font-family:monospace;font-size:11px">${fmtN(c.results)}</td>
-    <td style="padding:7px 8px;font-size:11px;font-weight:700;color:${c.cpr<50?GREEN:RED}">₹${c.cpr.toFixed(2)}</td>
-    <td style="padding:7px 8px;font-size:10px;color:var(--muted)">${c.resultType}</td>
-  </tr>`;
-  document.getElementById('bestTbody').innerHTML=best.length?best.map(row).join(''):'<tr><td colspan="4" style="padding:10px;color:var(--muted)">No data</td></tr>';
-  document.getElementById('worstTbody').innerHTML=worst.length?worst.map(row).join(''):'<tr><td colspan="4" style="padding:10px;color:var(--muted)">No data</td></tr>';
-}
-
-// Creative modal for best/worst clicks
-async function openCreativeModal(campId, campName){
-  const camp = ALL.find(c=>c.id===campId);
-  const campAccount = camp?.accountId || ACCOUNT;
-  // Show modal immediately with loading state
-  let modal = document.getElementById('creativeModal');
-  if(!modal){
-    modal = document.createElement('div');
-    modal.id = 'creativeModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
-    modal.onclick = function(e){ if(e.target===modal) closeCreativeModal(); };
-    document.body.appendChild(modal);
+  function makeRow(c){
+    var tr=document.createElement('tr');
+    tr.style.cssText='border-bottom:1px solid rgba(201,168,76,0.05);cursor:pointer;transition:background 0.1s';
+    tr.setAttribute('data-cid',c.id);
+    tr.addEventListener('mouseover',function(){this.style.background='rgba(201,168,76,0.04)';});
+    tr.addEventListener('mouseout',function(){this.style.background='transparent';});
+    tr.addEventListener('click',function(){openCreativeModal(c.id,c.name);});
+    tr.innerHTML='<td style="padding:7px 8px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px" title="'+c.name+'"><span style="font-size:9px;color:var(--muted);margin-right:4px">📸</span>'+c.name+'</td>'+
+      '<td style="padding:7px 8px;font-family:monospace;font-size:11px">'+fmtN(c.results)+'</td>'+
+      '<td style="padding:7px 8px;font-size:11px;font-weight:700;color:'+(c.cpr<50?GREEN:RED)+'">₹'+c.cpr.toFixed(2)+'</td>'+
+      '<td style="padding:7px 8px;font-size:10px;color:var(--muted)">'+c.resultType+'</td>';
+    return tr;
   }
-  modal.style.display = 'flex';
-  modal.innerHTML = `
-    <div style="background:#162348;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:24px;max-width:800px;width:100%;max-height:85vh;overflow-y:auto;position:relative">
-      <button onclick="closeCreativeModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#7a87a8;font-size:20px;cursor:pointer">✕</button>
-      <div style="font-size:13px;font-weight:700;color:#C9A84C;margin-bottom:4px">📸 Creatives</div>
-      <div style="font-size:11px;color:#7a87a8;margin-bottom:16px">${campName}</div>
-      <div id="modalContent" style="text-align:center;padding:24px;color:#7a87a8;font-size:12px">⏳ Loading creatives...</div>
-    </div>`;
-
-  // Fetch ads
-  const tok = gtok();
-  const dpSel2 = document.getElementById('dateFilter')?.value||'maximum';
-  const since2 = document.getElementById('dateFrom')?.value||'';
-  const until2 = document.getElementById('dateTo')?.value||'';
-  const dateParam2 = (dpSel2==='custom'&&since2&&until2)
-    ? 'time_range[since]='+since2+'&time_range[until]='+until2
-    : 'date_preset='+(dpSel2==='custom'?'maximum':dpSel2);
-  try{
-    if(adCache[campId]){
-      renderModalAds(adCache[campId], campName);
-      return;
-    }
-    const [ar,ir] = await Promise.all([
-      fetch(`${G}/act_${campAccount}/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body,object_story_spec,effective_instagram_media_id}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
-      fetch(`${G}/act_${campAccount}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParam2}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
-    ]);
-    const [ad,ins] = await Promise.all([ar.json(),ir.json()]);
-    if(ad.error) throw new Error(ad.error.message);
-    const im={};(ins.data||[]).forEach(i=>{im[i.ad_id]=i;});
-    const ads=(ad.data||[]).map(a=>{
-      const i=im[a.id]||{};let res=0;
-      if(i.actions?.length){const top=i.actions.reduce((m,x)=>parseInt(x.value||0)>parseInt(m.value||0)?x:m,i.actions[0]);res=parseInt(top.value||0);}
-      return{id:a.id,name:a.name,thumb:a.creative?.image_url||a.creative?.thumbnail_url||null,isVideo:!!a.creative?.video_id,body:a.creative?.body||'',spend:parseFloat(i.spend||0),ctr:parseFloat(i.ctr||0),results:res};
-    });
-    adCache[campId]=ads;
-    renderModalAds(ads, campName);
-  }catch(e){
-    document.getElementById('modalContent').innerHTML=`<div style="color:#e05252;padding:16px">⚠ ${e.message}</div>`;
+  var bestEl=document.getElementById('bestTbody');
+  var worstEl=document.getElementById('worstTbody');
+  if(bestEl){
+    bestEl.innerHTML='';
+    if(best.length) best.forEach(function(c){bestEl.appendChild(makeRow(c));});
+    else bestEl.innerHTML='<tr><td colspan="4" style="padding:10px;color:var(--muted)">No data</td></tr>';
+  }
+  if(worstEl){
+    worstEl.innerHTML='';
+    if(worst.length) worst.forEach(function(c){worstEl.appendChild(makeRow(c));});
+    else worstEl.innerHTML='<tr><td colspan="4" style="padding:10px;color:var(--muted)">No data</td></tr>';
   }
 }
 
-function renderModalAds(ads, campName){
+function makeCard(ad, idx, isModal, account) {
+  var div = document.createElement('div');
+  div.style.cssText = 'background:rgba(255,255,255,.025);border:1px solid rgba(201,168,76,.15);border-radius:' + (isModal?'8':'10') + 'px;overflow:hidden;cursor:pointer;transition:border-color .2s';
+  div.className = 'cr-card';
+  div.addEventListener('mouseover', function(){ this.style.borderColor='#C9A84C'; });
+  div.addEventListener('mouseout', function(){ this.style.borderColor='rgba(201,168,76,.15)'; });
+  
+  var metaUrl = 'https://www.facebook.com/adsmanager/manage/ads?act=' + account + '&selected_ad_ids=' + ad.id;
+  
+  // Click handler
+  div.addEventListener('click', function(e) {
+    if (e.target.tagName === 'A') return;
+    if (ad.isVideo) { window.open(metaUrl, '_blank'); }
+    else if (ad.thumb) { openLB(ad.thumb, ad.body || ''); }
+    else { window.open(metaUrl, '_blank'); }
+  });
+  
+  // Thumbnail
+  var ratio = isModal ? '1/1' : '4/3';
+  var thumbWrap = document.createElement('div');
+  thumbWrap.style.cssText = 'position:relative;width:100%;aspect-ratio:' + ratio + ';background:#162348;overflow:hidden;display:flex;align-items:center;justify-content:center';
+  
+  if (ad.thumb) {
+    var img = document.createElement('img');
+    img.src = ad.thumb;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#fff;display:block';
+    thumbWrap.appendChild(img);
+  } else {
+    var icon = document.createElement('div');
+    icon.style.fontSize = isModal ? '28px' : '36px';
+    icon.textContent = ad.isVideo ? '🎬' : '🖼️';
+    thumbWrap.appendChild(icon);
+  }
+  
+  if (ad.isVideo) {
+    var badge = document.createElement('div');
+    badge.style.cssText = 'position:absolute;top:' + (isModal?'4':'6') + 'px;right:' + (isModal?'4':'6') + 'px;background:rgba(0,0,0,.8);border-radius:' + (isModal?'3':'4') + 'px;padding:' + (isModal?'2px 5px':'3px 7px') + ';font-size:9px;font-weight:800;color:#fff';
+    badge.textContent = '▶ ' + (isModal ? 'PLAY' : 'CLICK TO PLAY');
+    thumbWrap.appendChild(badge);
+  }
+  div.appendChild(thumbWrap);
+  
+  // Meta info
+  var meta = document.createElement('div');
+  meta.style.cssText = 'padding:' + (isModal?'9px 10px':'12px 14px');
+  
+  var name = document.createElement('div');
+  name.style.cssText = 'font-size:' + (isModal?'9':'11') + 'px;color:#7a87a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:' + (isModal?'6':'8') + 'px';
+  name.textContent = ad.name;
+  meta.appendChild(name);
+  
+  // Stats row
+  var stats = document.createElement('div');
+  stats.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:' + (isModal?'0':'8') + 'px';
+  var ctrColor = ad.ctr>=1 ? '#3dba7c' : (ad.ctr>0 ? '#e05252' : '#f0f4ff');
+  var sz = isModal ? '12' : '13';
+  
+  [['₹'+fmt(ad.spend),'Spend',''], [ad.ctr.toFixed(1)+'%','CTR',ctrColor], [fmtN(ad.results),'Results','']].forEach(function(item){
+    var col = document.createElement('div');
+    col.style.textAlign = 'center';
+    var val = document.createElement('div');
+    val.style.cssText = 'font-size:'+sz+'px;font-weight:800' + (item[2]?';color:'+item[2]:'');
+    val.textContent = item[0];
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:' + (isModal?'9':'10') + 'px;color:#4a5578';
+    lbl.textContent = item[1];
+    col.appendChild(val);
+    col.appendChild(lbl);
+    stats.appendChild(col);
+  });
+  meta.appendChild(stats);
+  
+  // View HD link
+  var link = document.createElement('a');
+  link.href = metaUrl;
+  link.target = '_blank';
+  link.style.cssText = 'display:block;margin-top:' + (isModal?'5':'0') + 'px;padding:' + (isModal?'4px':'6px') + ';background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:' + (isModal?'4':'5') + 'px;color:#C9A84C;font-size:' + (isModal?'9':'10') + 'px;font-weight:700;text-align:center;text-decoration:none;margin-top:' + (isModal?'5':'8') + 'px';
+  link.textContent = '🔗 View HD on Meta';
+  meta.appendChild(link);
+  div.appendChild(meta);
+  
+  return div;
+}
+
+function renderCreatives(drawer, ads, campName) {
+  drawer.innerHTML = '';
+  if (!ads.length) {
+    drawer.innerHTML = '<div style="text-align:center;padding:18px;color:#7a87a8;font-size:12px">No ads found in this campaign.</div>';
+    return;
+  }
+  
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:11px;font-weight:700;color:#C9A84C;margin-bottom:14px';
+  title.textContent = '📸 ' + ads.length + ' Ad' + (ads.length>1?'s':'') + ' — "' + campName.substring(0,45) + '"';
+  drawer.appendChild(title);
+  
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px';
+  
+  for (var i = 0; i < ads.length; i++) {
+    grid.appendChild(makeCard(ads[i], i, false, campAccount));
+  }
+  drawer.appendChild(grid);
+}
+
+function renderModalAds(ads, campName) {
   var mc = document.getElementById('modalContent');
-  if(!ads.length){mc.innerHTML='<div style="color:var(--muted);padding:16px">No ads found for this campaign in the selected period.</div>';return;}
-  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">';
-  ads.forEach(function(a){
-    var safeThumb = a.thumb ? a.thumb.replace(/'/g,'%27') : '';
-    var safeBody = (a.body||'').replace(/'/g,' ').substring(0,80);
-    var ctrColor = a.ctr>=1?'#3dba7c':a.ctr>0?'#e05252':'#f0f4ff';
-    var thumbHtml = a.thumb
-      ? '<img src="'+a.thumb+'" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML=\'<span>'+(a.isVideo?'\uD83C\uDFAC':'\uD83D\uDDBC')+'</span>\'">'
-      : '<span>'+(a.isVideo?'\uD83C\uDFAC':'\uD83D\uDDBC')+'</span>';
-    var videoBadge = a.isVideo ? '<span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.75);border-radius:3px;padding:2px 4px;font-size:9px;font-weight:700;color:#fff">\u25BA VIDEO</span>' : '';
-    html += '<div onclick="openLB(\''+safeThumb+'\',\''+a.isVideo+'\',\''+safeBody+'\')" style="background:rgba(255,255,255,0.025);border:1px solid rgba(201,168,76,0.15);border-radius:8px;overflow:hidden;cursor:'+(a.thumb?'pointer':'default')+'" onmouseover="this.style.borderColor=\'#C9A84C\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,0.15)\'">';
-    html += '<div style="width:100%;aspect-ratio:1;background:#162348;display:flex;align-items:center;justify-content:center;font-size:28px;color:#4a5578;position:relative">'+thumbHtml+videoBadge+'</div>';
-    html += '<div style="padding:9px 10px">';
-    html += '<div style="font-size:9px;color:#7a87a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:7px" title="'+a.name+'">'+a.name+'</div>';
-    html += '<div style="display:flex;justify-content:space-between">';
-    html += '<div style="text-align:center"><div style="font-size:12px;font-weight:800">\u20B9'+fmt(a.spend)+'</div><div style="font-size:9px;color:#4a5578;margin-top:1px">Spend</div></div>';
-    html += '<div style="text-align:center"><div style="font-size:12px;font-weight:800;color:'+ctrColor+'">'+a.ctr.toFixed(1)+'%</div><div style="font-size:9px;color:#4a5578;margin-top:1px">CTR</div></div>';
-    html += '<div style="text-align:center"><div style="font-size:12px;font-weight:800">'+fmtN(a.results)+'</div><div style="font-size:9px;color:#4a5578;margin-top:1px">Results</div></div>';
-    html += '</div></div></div>';
-  });
-  html += '</div>';
-  mc.innerHTML = html;
+  if (!mc) return;
+  mc.innerHTML = '';
+  if (!ads.length) {
+    mc.innerHTML = '<div style="color:#7a87a8;padding:16px;text-align:center;font-size:12px">No ads found.</div>';
+    return;
+  }
+  
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px';
+  
+  for (var i = 0; i < ads.length; i++) {
+    grid.appendChild(makeCard(ads[i], i, true, campAccount));
+  }
+  mc.appendChild(grid);
 }
 
-function closeCreativeModal(){
-  const m=document.getElementById('creativeModal');
-  if(m)m.style.display='none';
-}
-
-function renderAlerts(data){
-  const ts=data.reduce((s,c)=>s+c.spend,0),tr=data.reduce((s,c)=>s+c.results,0);
-  const bCPR=tr>0?ts/tr:0;
-  const alerts=[];
-  const hi=data.filter(c=>c.cpr>bCPR*2&&c.results>0&&c.status==='ACTIVE');
-  if(hi.length)alerts.push({t:'red',ti:'🔴 High Cost/Result — Active',b:`${hi.length} active campaign(s) at 2× avg (₹${bCPR.toFixed(0)}). Review: ${hi.map(c=>c.name.substring(0,20)).join(', ')}`});
-  const lc=data.filter(c=>c.ctr<1&&c.status==='ACTIVE'&&c.impressions>500);
-  if(lc.length)alerts.push({t:'red',ti:'🔴 Low CTR on Active Campaigns',b:`${lc.length} active campaign(s) below 1% CTR. Refresh creatives or narrow audience.`});
-  const st=data.filter(c=>c.cpr>0&&c.cpr<bCPR*0.7&&c.results>10);
-  if(st.length)alerts.push({t:'green',ti:'🟢 Scale These — Strong CPR',b:`${st.length} campaign(s) 30%+ below avg cost/result. Increase budget 30–50%.`});
-  const zs=data.filter(c=>c.status==='ACTIVE'&&c.spend===0);
-  if(zs.length)alerts.push({t:'yellow',ti:'🟡 Active but Zero Spend',b:`${zs.length} campaign(s) ACTIVE but no spend detected. Check budget or delivery.`});
-  const avgCTR=data.length?data.reduce((s,c)=>s+c.ctr,0)/data.length:0;
-  if(avgCTR>=1.5)alerts.push({t:'green',ti:'🟢 Excellent Overall CTR',b:`Avg CTR ${avgCTR.toFixed(2)}% — well above benchmark!`});
-  if(!alerts.length)alerts.push({t:'green',ti:'🟢 All Systems Normal',b:'No anomalies detected in the selected period.'});
-  const col={red:RED,green:GREEN,yellow:GOLD};
-  document.getElementById('alertsGrid').innerHTML=alerts.map(a=>`<div class="alert" style="background:${col[a.t]}0d;border:1px solid ${col[a.t]}33"><div class="al-t" style="color:${col[a.t]}">${a.ti}</div><div class="al-b">${a.b}</div></div>`).join('');
-}
-
-// ── CREATIVES DRAWER ──
-let openDrawerId=null;
-function toggleDrawer(el){
-  var id = el.getAttribute('data-cid');
-  var name = el.querySelector('.cname') ? el.querySelector('.cname').textContent.replace('▶ ','').replace('▼ ','').trim() : id;
-  const dr=document.getElementById('dr-'+id);
-  const row=document.getElementById('dr-row-'+id);
-  const isOpen=dr.classList.contains('open');
-  // Close all
-  document.querySelectorAll('.drawer.open').forEach(d=>{d.classList.remove('open');d.closest('tr').style.display='none';});
-  document.querySelectorAll('.camp-row').forEach(r=>{const fn=r.querySelector('.cname');if(fn)fn.textContent=fn.textContent.replace('▼','▶');});
-  if(isOpen){openDrawerId=null;return;}
-  row.style.display='table-row';dr.classList.add('open');openDrawerId=id;
-  // Update arrow
-  const rows=document.querySelectorAll('.camp-row');
-  rows.forEach(r=>{if(r.onclick&&r.getAttribute('onclick')?.includes(id)){const fn=r.querySelector('.cname');if(fn)fn.textContent=fn.textContent.replace('▶','▼');}});
-  if(!adCache[id])loadCreatives(id,name,dr);
-  else renderCreatives(dr,adCache[id],name);
-}
-
-async function loadCreatives(campId,campName,drawer){
-  // Find which account this campaign belongs to
-  const camp = ALL.find(c=>c.id===campId);
-  const campAccount = camp?.accountId || ACCOUNT;
-  const tok=getToken();
-  const dpSelC=document.getElementById('dateFilter')?.value||'maximum';
-  const sinceC=document.getElementById('dateFrom')?.value||'';
-  const untilC=document.getElementById('dateTo')?.value||'';
-  const dateParamC=(dpSelC==='custom'&&sinceC&&untilC)
-    ? 'time_range[since]='+sinceC+'&time_range[until]='+untilC
-    : 'date_preset='+(dpSelC==='custom'?'maximum':dpSelC);
-  try{
-    const [ar,ir]=await Promise.all([
-      fetch(`${GRAPH}/act_${ACCOUNT}/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body,object_story_spec,effective_instagram_media_id}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
-      fetch(`${GRAPH}/act_${ACCOUNT}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParamC}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
-    ]);
-    const [ad,ins]=await Promise.all([ar.json(),ir.json()]);
-    if(ad.error)throw new Error(ad.error.message);
-    const iMap={};(ins.data||[]).forEach(i=>{iMap[i.ad_id]=i;});
-    const ads=(ad.data||[]).map(a=>{
-      const i=iMap[a.id]||{};
-      let results=0;
-      if(i.actions?.length){const top=i.actions.reduce((m,x)=>parseInt(x.value||0)>parseInt(m.value||0)?x:m,i.actions[0]);results=parseInt(top.value||0);}
-      return{id:a.id,name:a.name,thumb:a.creative?.image_url||a.creative?.thumbnail_url||null,isVideo:!!a.creative?.video_id,body:a.creative?.body||'',spend:parseFloat(i.spend||0),ctr:parseFloat(i.ctr||0),results};
-    });
-    adCache[campId]=ads;
-    renderCreatives(drawer,ads,campName);
-  }catch(e){drawer.innerHTML=`<div class="drawer-msg">⚠ Could not load creatives: ${e.message}</div>`;}
-}
-
-function renderCreatives(drawer,ads,campName){
-  if(!ads.length){drawer.innerHTML='<div class="drawer-msg">No ads found in this campaign for the selected period.</div>';return;}
-  var html = '<div class="drawer-title">\u{1F4F8} '+ads.length+' Ad'+(ads.length>1?'s':'')+' \u2014 "'+campName.substring(0,45)+'"</div>';
-  html += '<div class="creatives-grid">';
-  ads.forEach(function(ad){
-    var thumbHtml = ad.thumb
-      ? '<img class="cc-thumb" src="'+ad.thumb+'" onerror="this.parentElement.innerHTML=\'<span>'+(ad.isVideo?'\uD83C\uDFAC':'\uD83D\uDDBC')+'</span>\'">'
-      : '<span>'+(ad.isVideo?'\uD83C\uDFAC':'\uD83D\uDDBC')+'</span>';
-    var videoBadge = ad.isVideo ? '<span class="vid-badge">\u25BA VIDEO</span>' : '';
-    var ctrColor = ad.ctr>=1?'#3dba7c':ad.ctr>0?'#e05252':'#f0f4ff';
-    var safeThumb = ad.thumb ? ad.thumb.replace(/'/g,'%27') : '';
-    var safeBody = (ad.body||'').replace(/'/g,' ').substring(0,80);
-    html += '<div class="cc" onclick="openLB(\''+safeThumb+'\',\''+ad.isVideo+'\',\''+safeBody+'\')">';
-    html += '<div class="cc-thumb-wrap">'+thumbHtml+videoBadge+'</div>';
-    html += '<div class="cc-meta">';
-    html += '<div class="cc-name" title="'+ad.name+'">'+ad.name+'</div>';
-    html += '<div class="cc-stats">';
-    html += '<div class="cs"><div class="cs-v">\u20B9'+fmt(ad.spend)+'</div><div class="cs-l">Spend</div></div>';
-    html += '<div class="cs"><div class="cs-v" style="color:'+ctrColor+'">'+ad.ctr.toFixed(1)+'%</div><div class="cs-l">CTR</div></div>';
-    html += '<div class="cs"><div class="cs-v">'+fmtN(ad.results)+'</div><div class="cs-l">Results</div></div>';
-    html += '</div></div></div>';
-  });
-  html += '</div>';
-  drawer.innerHTML = html;
-}
-
-function openLB(thumb,isVideo,body){
-  if(!thumb)return;
-  document.getElementById('lbImg').src=thumb;
-  document.getElementById('lbInfo').textContent=(isVideo==='true'?'▶ Video ad — thumbnail shown. Open Meta Ads Manager to play. ':'')+(body||'');
-  document.getElementById('lightbox').classList.add('open');
-}
 function closeLB(){document.getElementById('lightbox').classList.remove('open');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLB();});
 
@@ -754,7 +746,213 @@ function fmtN(n){if(n>=10000000)return(n/10000000).toFixed(1)+'Cr';if(n>=100000)
 
 
 
+
+
+// ── TOKEN CONFIG ──
+
+function setToken(t){ sessionStorage.setItem('jc_tok', t); }
+
+function getToken(){ return sessionStorage.getItem('jc_tok') || DEFAULT_TOKEN; }
+function toggleTokenBar(){
+  const b = document.getElementById('tokenBar');
+  if(b) b.style.display = b.style.display === 'flex' ? 'none' : 'flex';
+}
+function applyTok(){
+  const t = document.getElementById('newTokenInput');
+  if(t && t.value.trim()){
+    setToken(t.value.trim());
+    toggleTokenBar();
+    loadData();
+  }
+}
+
+// ── MISSING FUNCTIONS ──
+
+async function loadCreatives(campId, campName, drawer) {
+  const tok = getToken();
+  const camp = ALL.find(c => c.id === campId);
+  const campAccount = camp?.accountId || ACCOUNT;
+  const dpSelC = document.getElementById('dateFilter')?.value || 'maximum';
+  const sinceC = document.getElementById('dateFrom')?.value || '';
+  const untilC = document.getElementById('dateTo')?.value || '';
+  const dateParamC = (dpSelC==='custom' && sinceC && untilC)
+    ? 'time_range[since]='+sinceC+'&time_range[until]='+untilC
+    : 'date_preset=maximum';
+  try {
+    const [ar, ir] = await Promise.all([
+      fetch(GRAPH+'/'+campId+'/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body}&limit=50&access_token='+tok),
+      fetch(GRAPH+'/act_'+campAccount+'/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&date_preset=maximum&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"'+campId+'"}]&limit=50&access_token='+tok)
+    ]);
+    const [adData, insData] = await Promise.all([ar.json(), ir.json()]);
+    if (adData.error) throw new Error(adData.error.message);
+    const iMap = {};
+    (insData.data || []).forEach(function(i) { iMap[i.ad_id] = i; });
+    const ads = (adData.data || []).map(function(a) {
+      const ins = iMap[a.id] || {};
+      let results = 0;
+      if (ins.actions && ins.actions.length) {
+        const top = ins.actions.reduce(function(m, x) { return parseInt(x.value||0) > parseInt(m.value||0) ? x : m; }, ins.actions[0]);
+        results = parseInt(top.value || 0);
+      }
+      return {
+        id: a.id,
+        name: a.name,
+        thumb: a.creative ? (a.creative.image_url || a.creative.thumbnail_url || null) : null,
+        isVideo: !!(a.creative && a.creative.video_id),
+        body: a.creative ? (a.creative.body || '') : '',
+        spend: parseFloat(ins.spend || 0),
+        ctr: parseFloat(ins.ctr || 0),
+        results: results
+      };
+    });
+    adCache[campId] = {ads: ads, account: campAccount};
+    renderCreatives(drawer, ads, campName);
+  } catch(e) {
+    drawer.innerHTML = '<div style="text-align:center;padding:14px;color:#e05252;font-size:12px">⚠ Could not load creatives: ' + e.message + '</div>';
+  }
+}
+
+function toggleDrawer(el) {
+  const id = el.getAttribute('data-cid');
+  const name = el.querySelector('.cname') ? el.querySelector('.cname').textContent.replace('▶ ','').replace('▼ ','').trim() : id;
+  const dr = document.getElementById('dr-' + id);
+  const row = document.getElementById('dr-row-' + id);
+  if (!dr || !row) return;
+  const isOpen = dr.classList.contains('open');
+  // Close all open drawers
+  document.querySelectorAll('.drawer.open').forEach(function(d) {
+    d.classList.remove('open');
+    d.closest('tr').style.display = 'none';
+  });
+  document.querySelectorAll('#campTable .cname').forEach(function(e) {
+    e.textContent = e.textContent.replace('▼ ','▶ ');
+  });
+  if (isOpen) return;
+  row.style.display = 'table-row';
+  dr.classList.add('open');
+  const cn = el.querySelector('.cname');
+  if (cn) cn.textContent = cn.textContent.replace('▶ ','▼ ');
+  if (adCache[id]) {
+    renderCreatives(dr, adCache[id].ads, name);
+  } else {
+    dr.innerHTML = '<div style="padding:14px;text-align:center;color:#7a87a8;font-size:12px">⏳ Loading creatives...</div>';
+    loadCreatives(id, name, dr);
+  }
+}
+
+function renderAlerts(data) {
+  const ts = data.reduce(function(s,c){return s+c.spend;},0);
+  const tr = data.reduce(function(s,c){return s+c.results;},0);
+  const bCPR = tr > 0 ? ts/tr : 0;
+  const alerts = [];
+  const hi = data.filter(function(c){return c.cpr > bCPR*2 && c.results > 0 && c.status==='ACTIVE';});
+  if (hi.length) alerts.push({t:'red',ti:'🔴 High Cost/Result — Active',b:hi.length+' active campaign(s) at 2× avg (₹'+bCPR.toFixed(0)+'). Review: '+hi.slice(0,3).map(function(c){return c.name.substring(0,18);}).join(', ')});
+  const lc = data.filter(function(c){return c.ctr<1 && c.status==='ACTIVE' && c.impressions>500;});
+  if (lc.length) alerts.push({t:'red',ti:'🔴 Low CTR on Active Campaigns',b:lc.length+' active campaign(s) below 1% CTR. Refresh creatives or narrow audience.'});
+  const st = data.filter(function(c){return c.cpr>0 && c.cpr<bCPR*0.7 && c.results>10;});
+  if (st.length) alerts.push({t:'green',ti:'🟢 Scale These — Strong CPR',b:st.length+' campaign(s) 30%+ below avg. Increase budget 30–50%.'});
+  const zs = data.filter(function(c){return c.status==='ACTIVE' && c.spend===0;});
+  if (zs.length) alerts.push({t:'yellow',ti:'🟡 Active but Zero Spend',b:zs.length+' campaign(s) ACTIVE but no spend. Check budget settings.'});
+  const avgCTR = data.length ? data.reduce(function(s,c){return s+c.ctr;},0)/data.length : 0;
+  if (avgCTR>=1.5) alerts.push({t:'green',ti:'🟢 Excellent Overall CTR',b:'Avg CTR '+avgCTR.toFixed(2)+'% — well above benchmark!'});
+  if (!alerts.length) alerts.push({t:'green',ti:'🟢 All Systems Normal',b:'No anomalies detected in the selected period.'});
+  const col={red:'#e05252',green:'#3dba7c',yellow:'#C9A84C'};
+  document.getElementById('alertsGrid').innerHTML = alerts.map(function(a){
+    return '<div style="background:'+col[a.t]+'0d;border:1px solid '+col[a.t]+'33;border-radius:8px;padding:12px 14px"><div style="font-size:11px;font-weight:700;color:'+col[a.t]+';margin-bottom:4px">'+a.ti+'</div><div style="font-size:11px;color:#7a87a8;line-height:1.55">'+a.b+'</div></div>';
+  }).join('');
+}
+
+function openLB(thumb, body) {
+  if (!thumb) return;
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbInfo = document.getElementById('lbInfo');
+  if (lb && lbImg) {
+    lbImg.src = thumb;
+    if (lbInfo) lbInfo.textContent = body || '';
+    lb.classList.add('open');
+  }
+}
+
+function closeCreativeModal() {
+  const overlay = document.getElementById('cmOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function rcClick(el) {
+  var idx = parseInt(el.getAttribute('data-idx'));
+  var ad = window._rcAds ? window._rcAds[idx] : null;
+  if (!ad) return;
+  var metaUrl = 'https://www.facebook.com/adsmanager/manage/ads?act=' + (window._rcAccount||ACCOUNT) + '&selected_ad_ids=' + ad.id;
+  if (ad.isVideo) { window.open(metaUrl, '_blank'); }
+  else if (ad.thumb) { openLB(ad.thumb, ad.body || ''); }
+  else { window.open(metaUrl, '_blank'); }
+}
+
+function rmaClick(el) {
+  var idx = parseInt(el.getAttribute('data-ridx'));
+  var a = window._rmaAds ? window._rmaAds[idx] : null;
+  if (!a) return;
+  var metaUrl = 'https://www.facebook.com/adsmanager/manage/ads?act=' + (window._rmaAccount||ACCOUNT) + '&selected_ad_ids=' + a.id;
+  if (a.isVideo) { window.open(metaUrl, '_blank'); }
+  else if (a.thumb) { openLB(a.thumb, a.body || ''); }
+  else { window.open(metaUrl, '_blank'); }
+}
+
+async function openCreativeModal(campId, campName){
+  const camp = ALL.find(c => c.id === campId);
+  campAccount = camp ? (camp.accountId || ACCOUNT) : ACCOUNT;
+  
+  // Show or create modal
+  var overlay = document.getElementById('cmOverlay');
+  var mc = document.getElementById('modalContent');
+  if(overlay){ overlay.style.display='flex'; }
+  if(mc){ mc.innerHTML='<div style="text-align:center;padding:20px;color:#7a87a8;font-size:12px">⏳ Loading creatives...</div>'; }
+  
+  // Check cache
+  if(adCache[campId]){
+    renderModalAds(adCache[campId], campName);
+    return;
+  }
+  
+  const tok = getToken();
+  const dpSel = document.getElementById('dateFilter')?.value || 'maximum';
+  const sinceC = document.getElementById('dateFrom')?.value || '';
+  const untilC = document.getElementById('dateTo')?.value || '';
+  
+  try {
+    const [ar, ir] = await Promise.all([
+      fetch(GRAPH+'/'+campId+'/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body}&limit=50&access_token='+tok),
+      fetch(GRAPH+'/act_'+campAccount+'/insights?fields=ad_id,spend,clicks,ctr,actions&level=ad&date_preset=maximum&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"'+campId+'"}]&limit=50&access_token='+tok)
+    ]);
+    const [adData, insData] = await Promise.all([ar.json(), ir.json()]);
+    if(adData.error) throw new Error(adData.error.message);
+    const iMap = {};
+    (insData.data||[]).forEach(function(i){ iMap[i.ad_id]=i; });
+    const ads = (adData.data||[]).map(function(a){
+      const ins=iMap[a.id]||{};
+      let res=0;
+      if(ins.actions&&ins.actions.length){
+        const top=ins.actions.reduce(function(m,x){return parseInt(x.value||0)>parseInt(m.value||0)?x:m;},ins.actions[0]);
+        res=parseInt(top.value||0);
+      }
+      return{id:a.id,name:a.name,thumb:a.creative?(a.creative.image_url||a.creative.thumbnail_url||null):null,isVideo:!!(a.creative&&a.creative.video_id),body:a.creative?(a.creative.body||''):'',spend:parseFloat(ins.spend||0),ctr:parseFloat(ins.ctr||0),results:res};
+    });
+    adCache[campId]=ads;
+    renderModalAds(ads, campName);
+  } catch(e) {
+    if(mc) mc.innerHTML='<div style="color:#e05252;padding:16px;text-align:center">⚠ '+e.message+'</div>';
+  }
+}
 </script>
 
+
+<!-- Creative Modal -->
+<div id="cmOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeCreativeModal()">
+  <div style="background:#162348;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:24px;max-width:820px;width:100%;max-height:85vh;overflow-y:auto;position:relative">
+    <button onclick="closeCreativeModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#7a87a8;font-size:20px;cursor:pointer">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
 </body>
 </html>
