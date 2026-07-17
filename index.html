@@ -258,7 +258,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
 <script>
 // ── CONFIG ──
 const ACCOUNT = '284575610666153';
-const DEFAULT_TOKEN = 'EAAjpi72DaZCoBRxnhZCARhm1S3oBZAf6SyoF0ZCuJRgVJwSP8olJH4JLp47gHZA3On75o4X9qndDtHmI3HwaqW6PZC4nV8JxBddaNOEKtYvUZBvgim2LjpjGjgjTQoywJcOT819MaL6OTYDnkmutZBxF1hjWwU1PP7Luufwod2mRJbsnRPeHRIk5sSHAmg4m2YWZAJ3UJKHAg9rySqE3hnnfG9LJt4BsAdvfugMn6Q5gQ6YrXZBc77nxerzxkGvs3YnBNkkVDeHhq4UsjpS9jcqcAmjl94brek9dqyZCL62FqCZBY3ZBjXi086L9xdBt8eObekn2Hu6C9pspu';
+const DEFAULT_TOKEN = 'EAASytHgol70BR6j3vCis4ZA9W7ogNBoI1ZCe5Yl10zFht2kUuRrjuojKKEpEwdVVYyOtHG8BxLqWZAF5pz4H220fTAEENs67CLk5Se20wY2GNi1hE2a1jZButxNxZBrXZBzZAQ31KBZC97oB5wzmnFAHhxIgZAqJBZBMJa5yDUcmgZA9uCJtPD9ZAWLfF7qQT0oR';
 const GRAPH = 'https://graph.facebook.com/v19.0';
 const GOLD='#C9A84C',GREEN='#3dba7c',RED='#e05252',BLUE='#5b8dee';
 
@@ -580,7 +580,7 @@ async function openCreativeModal(campId, campName){
       return;
     }
     const [ar,ir] = await Promise.all([
-      fetch(`${G}/act_${campAccount}/ads?fields=id,name,status,adset_id,campaign_id,creative{thumbnail_url,image_url,video_id,body,image_hash,asset_feed_spec}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
+      fetch(`${G}/act_${campAccount}/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body,object_story_spec,effective_instagram_media_id}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
       fetch(`${G}/act_${campAccount}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParam2}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
     ]);
     const [ad,ins] = await Promise.all([ar.json(),ir.json()]);
@@ -589,7 +589,7 @@ async function openCreativeModal(campId, campName){
     const ads=(ad.data||[]).map(a=>{
       const i=im[a.id]||{};let res=0;
       if(i.actions?.length){const top=i.actions.reduce((m,x)=>parseInt(x.value||0)>parseInt(m.value||0)?x:m,i.actions[0]);res=parseInt(top.value||0);}
-      return{id:a.id,name:a.name,thumb:a.creative?.image_url||a.creative?.thumbnail_url||null,isVideo:!!a.creative?.video_id,body:a.creative?.body||'',spend:parseFloat(i.spend||0),ctr:parseFloat(i.ctr||0),results:res,adsetId:a.adset_id,campId2:a.campaign_id};
+      return{id:a.id,name:a.name,thumb:a.creative?.image_url||a.creative?.thumbnail_url||null,isVideo:!!a.creative?.video_id,body:a.creative?.body||'',spend:parseFloat(i.spend||0),ctr:parseFloat(i.ctr||0),results:res};
     });
     adCache[campId]=ads;
     renderModalAds(ads, campName);
@@ -681,7 +681,7 @@ async function loadCreatives(campId,campName,drawer){
     : 'date_preset='+(dpSelC==='custom'?'maximum':dpSelC);
   try{
     const [ar,ir]=await Promise.all([
-      fetch(`${GRAPH}/act_${ACCOUNT}/ads?fields=id,name,status,adset_id,campaign_id,creative{thumbnail_url,image_url,video_id,body,image_hash,asset_feed_spec}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
+      fetch(`${GRAPH}/act_${ACCOUNT}/ads?fields=id,name,status,creative{thumbnail_url,image_url,video_id,body,object_story_spec,effective_instagram_media_id}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`),
       fetch(`${GRAPH}/act_${ACCOUNT}/insights?fields=ad_id,spend,clicks,ctr,actions,inline_link_clicks&level=ad&${dateParamC}&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campId}"}]&limit=50&access_token=${tok}`)
     ]);
     const [ad,ins]=await Promise.all([ar.json(),ir.json()]);
@@ -718,20 +718,13 @@ function renderCreatives(drawer,ads,campName){
     html += '<div class="cs"><div class="cs-v">\u20B9'+fmt(ad.spend)+'</div><div class="cs-l">Spend</div></div>';
     html += '<div class="cs"><div class="cs-v" style="color:'+ctrColor+'">'+ad.ctr.toFixed(1)+'%</div><div class="cs-l">CTR</div></div>';
     html += '<div class="cs"><div class="cs-v">'+fmtN(ad.results)+'</div><div class="cs-l">Results</div></div>';
-    html += '</div>';
-    html += '<a href="https://www.facebook.com/adsmanager/manage/ads?act='+campAccount+'&selected_ad_ids='+ad.id+'" target="_blank" style="display:block;margin-top:8px;padding:6px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:5px;color:#C9A84C;font-size:10px;font-weight:700;text-align:center;text-decoration:none;transition:background 0.15s" onmouseover="this.style.background='rgba(201,168,76,0.2)'" onmouseout="this.style.background='rgba(201,168,76,0.1)'">🔗 View HD on Meta</a>';
-    html += '</div></div>';
+    html += '</div></div></div>';
   });
   html += '</div>';
   drawer.innerHTML = html;
 }
 
-function openLB(thumb,isVideo,body,adId,acct){
-  // For videos, open Meta Ads Manager in new tab
-  if(isVideo==='true'&&adId&&acct){
-    window.open('https://www.facebook.com/adsmanager/manage/ads?act='+acct+'&selected_ad_ids='+adId,'_blank');
-    return;
-  }
+function openLB(thumb,isVideo,body){
   if(!thumb)return;
   document.getElementById('lbImg').src=thumb;
   document.getElementById('lbInfo').textContent=(isVideo==='true'?'▶ Video ad — thumbnail shown. Open Meta Ads Manager to play. ':'')+(body||'');
