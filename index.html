@@ -257,7 +257,7 @@ footer{text-align:center;padding:16px;color:var(--dim);font-size:10px;border-top
 <footer id="footer">JewelCasa Pvt Ltd · contact@jewelcasa.com · Meta Graph API · <span id="footerTs"></span></footer>
 
 <script>// ── GLOBAL CONFIG ──
-const DEFAULT_TOKEN = ''; // Paste your 60-day token here
+const DEFAULT_TOKEN = 'EAASytHgol70BR8m7VD8FSd6LiXoAqAgCYq0CSEphi8K6taJ4lwle773kbY2EwjVkbP3IOgvVreezwYFzMTG5EMLTUWBzUPr5dR6aNSZCmLuH115KtWsdwSYvNgmB3eX8j9CFE8BRkteIkAkTvoIbzZAUqMt6KBsqXZAsZBTlHi5BmXqQDjL9XUs5x0M9'; // Paste your 60-day token here
 const ACCOUNT = '284575610666153';
 const ALL_ACCOUNTS = ['284575610666153', '1768682786866998'];
 const GRAPH = 'https://graph.facebook.com/v19.0';
@@ -750,9 +750,9 @@ function fmtN(n){if(n>=10000000)return(n/10000000).toFixed(1)+'Cr';if(n>=100000)
 
 // ── TOKEN CONFIG ──
 
-function setToken(t){ sessionStorage.setItem('jc_tok', t); }
+function setToken(t){ localStorage.setItem('jc_tok', t); }
 
-function getToken(){ return sessionStorage.getItem('jc_tok') || DEFAULT_TOKEN; }
+function getToken(){ return localStorage.getItem('jc_tok') || DEFAULT_TOKEN; }
 function toggleTokenBar(){
   const b = document.getElementById('tokenBar');
   if(b) b.style.display = b.style.display === 'flex' ? 'none' : 'flex';
@@ -947,13 +947,8 @@ async function openCreativeModal(campId, campName){
 
 
 function clearDataCache() {
-  // Remove only data cache keys - never touch the token (jc_tok)
-  var keys = [];
-  for (var i = 0; i < sessionStorage.length; i++) {
-    var key = sessionStorage.key(i);
-    if (key && key !== 'jc_tok') keys.push(key);
-  }
-  keys.forEach(function(k) { sessionStorage.removeItem(k); });
+  // Clear ALL sessionStorage (only data cache - token is in localStorage)
+  sessionStorage.clear();
 }
 
 // ── INITIALISE ──
