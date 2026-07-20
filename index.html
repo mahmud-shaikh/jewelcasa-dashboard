@@ -972,6 +972,19 @@ window.onload = function() {
 document.addEventListener('keydown', function(e) {
   if(e.key === 'Escape') { closeLB(); closeCreativeModal(); }
 });
+
+function onDatePresetChange() {
+  var sel = document.getElementById('dateFilter');
+  var customDiv = document.getElementById('customDates');
+  if (!sel || !customDiv) return;
+  if (sel.value === 'custom') {
+    customDiv.style.display = 'flex';
+  } else {
+    customDiv.style.display = 'none';
+    sessionStorage.clear();
+    loadData();
+  }
+}
 </script>
 
 
