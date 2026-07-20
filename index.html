@@ -945,6 +945,17 @@ async function openCreativeModal(campId, campName){
   }
 }
 
+
+function clearDataCache() {
+  // Remove only data cache keys - never touch the token (jc_tok)
+  var keys = [];
+  for (var i = 0; i < sessionStorage.length; i++) {
+    var key = sessionStorage.key(i);
+    if (key && key !== 'jc_tok') keys.push(key);
+  }
+  keys.forEach(function(k) { sessionStorage.removeItem(k); });
+}
+
 // ── INITIALISE ──
 window.onload = function() {
   // Set all panels hidden initially
@@ -981,7 +992,7 @@ function onDatePresetChange() {
     customDiv.style.display = 'flex';
   } else {
     customDiv.style.display = 'none';
-    sessionStorage.clear();
+    clearDataCache(); // Only clear data cache, NOT the token
     loadData();
   }
 }
