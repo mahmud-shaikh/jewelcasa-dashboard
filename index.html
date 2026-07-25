@@ -388,7 +388,7 @@ async function loadData(){
   try{
     step(2);
     // Fetch from BOTH ad accounts simultaneously
-    const ALL_ACCOUNTS = ['284575610666153', '1768682786866998'];
+    const ALL_ACCOUNTS = ['1768682786866998', '1768682786866998'];
     const allFetches = ALL_ACCOUNTS.map(acct => Promise.all([
       fetch(`${GRAPH}/act_${acct}/campaigns?fields=id,name,status,effective_status,objective,created_time&limit=500&access_token=${tok}`),
       fetch(`${GRAPH}/act_${acct}/insights?fields=campaign_id,spend,impressions,reach,clicks,ctr,actions,cost_per_action_type,inline_link_clicks,inline_link_click_ctr&level=campaign&${dateParam}&limit=500&access_token=${tok}`)
