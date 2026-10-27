@@ -604,11 +604,39 @@ async function loadData(){
   const since = document.getElementById('dateFrom')?.value || '';
   const until = document.getElementById('dateTo')?.value || '';
 
+  // Helper: format Date as YYYY-MM-DD
+  function fmtDate(d){ return d.toISOString().split('T')[0]; }
+  const todayDate = new Date();
+  const todayStr  = fmtDate(todayDate);
+
+  // Convert relative presets to explicit time_range so Meta doesn't exclude today or
+  // cut off based on "completed days" logic (last_7_days API preset = last 7 COMPLETED
+  // days, which excludes today and can miss very recent campaigns).
   let dateParam;
   if(dpSel === 'custom' && since && until){
     dateParam = 'time_range[since]=' + since + '&time_range[until]=' + until;
+  } else if(dpSel === 'today'){
+    dateParam = 'time_range[since]=' + todayStr + '&time_range[until]=' + todayStr;
+  } else if(dpSel === 'yesterday'){
+    const y = new Date(todayDate); y.setDate(y.getDate()-1);
+    const ys = fmtDate(y);
+    dateParam = 'time_range[since]=' + ys + '&time_range[until]=' + ys;
+  } else if(dpSel === 'last_7_days'){
+    const s = new Date(todayDate); s.setDate(s.getDate()-6); // 6 days back + today = 7 days
+    dateParam = 'time_range[since]=' + fmtDate(s) + '&time_range[until]=' + todayStr;
+  } else if(dpSel === 'last_30_days'){
+    const s = new Date(todayDate); s.setDate(s.getDate()-29); // 29 days back + today = 30 days
+    dateParam = 'time_range[since]=' + fmtDate(s) + '&time_range[until]=' + todayStr;
+  } else if(dpSel === 'this_month'){
+    const s = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+    dateParam = 'time_range[since]=' + fmtDate(s) + '&time_range[until]=' + todayStr;
+  } else if(dpSel === 'last_month'){
+    const s = new Date(todayDate.getFullYear(), todayDate.getMonth()-1, 1);
+    const e = new Date(todayDate.getFullYear(), todayDate.getMonth(), 0);
+    dateParam = 'time_range[since]=' + fmtDate(s) + '&time_range[until]=' + fmtDate(e);
   } else {
-    dateParam = 'date_preset=' + (dpSel === 'custom' ? 'maximum' : dpSel);
+    // maximum / all time — use date_preset as-is
+    dateParam = 'date_preset=maximum';
   }
 
   const ck = 'jc_cache_' + dpSel + (dpSel==='custom'?since+until:'');
