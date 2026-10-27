@@ -381,11 +381,11 @@ footer { display: none; text-align: center; padding: 18px; font-size: 10px; colo
       <select id="dateFilter" onchange="onDatePresetChange()">
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
-        <option value="last_7_days" selected>Last 7 Days</option>
+        <option value="last_7_days">Last 7 Days</option>
         <option value="last_30_days">Last 30 Days</option>
         <option value="this_month">This Month</option>
         <option value="last_month">Last Month</option>
-        <option value="maximum">All Time</option>
+        <option value="maximum" selected>All Time</option>
         <option value="custom">Custom Range</option>
       </select>
     </div>
@@ -413,6 +413,18 @@ footer { display: none; text-align: center; padding: 18px; font-size: 10px; colo
         <option value="ctr">CTR ↓</option>
       </select>
     </div>
+  </div>
+
+  <!-- No Activity Banner -->
+  <div id="noActivityBanner" style="display:none;background:linear-gradient(135deg,rgba(201,168,76,0.10),rgba(201,168,76,0.04));border:1px solid rgba(201,168,76,0.35);border-radius:10px;padding:14px 20px;margin-bottom:12px;align-items:center;justify-content:space-between;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">📭</span>
+      <div>
+        <div style="font-weight:700;color:var(--text);font-size:13px" id="noActivityTitle">No ad activity in this period</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">No spend or impressions found. Your campaigns may not have run during this time.</div>
+      </div>
+    </div>
+    <button onclick="switchToAllTime()" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">View All Time ↗</button>
   </div>
 
   <!-- KPI Grid -->
@@ -580,7 +592,7 @@ let TABLE_LIMIT = 10; // show top 10, expandable via More
 async function loadData(){
   show('loading'); step(1);
   const tok = getToken();
-  const dpSel = document.getElementById('dateFilter')?.value || 'last_7_days';
+  const dpSel = document.getElementById('dateFilter')?.value || 'maximum';
 
   if(!tok || tok.trim() === ''){
     document.getElementById('errorTitle').textContent = '⚠ No Meta Access Token';
@@ -657,7 +669,7 @@ async function loadData(){
   }
 }
 
-let CURRENT_PERIOD = 'last_7_days';
+let CURRENT_PERIOD = 'maximum';
 function buildALL(cd, iMap, tMap, dpSel) {
   CURRENT_PERIOD = dpSel;
   // Always show all campaigns — period filter affects metrics only, not which campaigns appear
@@ -685,6 +697,12 @@ function buildALL(cd, iMap, tMap, dpSel) {
   });
 }
 
+function switchToAllTime(){
+  const df=document.getElementById('dateFilter');
+  if(df){df.value='maximum';localStorage.setItem('jc_period','maximum');}
+  clearDataCache();loadData();
+}
+
 function render(){
   const sf = document.getElementById('statusFilter')?.value||'ALL';
   const so = document.getElementById('sortFilter')?.value||'spend';
@@ -692,6 +710,21 @@ function render(){
   let data = sf==='ALL' ? ALL : ALL.filter(c=>c.status===sf);
   // Sort
   data = [...data].sort((a,b)=>so==='spend'?b.spend-a.spend:so==='results'?b.results-a.results:so==='cpr'?(a.cpr||999999)-(b.cpr||999999):b.ctr-a.ctr);
+
+  // Show/hide no-activity banner
+  const totalSpend = data.reduce((s,c)=>s+c.spend,0);
+  const totalImpr  = data.reduce((s,c)=>s+c.impressions,0);
+  const banner = document.getElementById('noActivityBanner');
+  const periodLabel = document.getElementById('dateFilter')?.options[document.getElementById('dateFilter')?.selectedIndex]?.text || 'this period';
+  if(banner){
+    if(totalSpend===0 && totalImpr===0 && CURRENT_PERIOD!=='maximum'){
+      document.getElementById('noActivityTitle').textContent = 'No ad activity in ' + periodLabel;
+      banner.style.display='flex';
+    } else {
+      banner.style.display='none';
+    }
+  }
+
   renderKPIs(data);
   renderTable(data);
   renderCharts(data);
@@ -1068,6 +1101,14 @@ async function openCreativeModal(campId,campName){
 window.onload=function(){
   ['loadingScreen','errorBox','mainPage'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   const ft=document.querySelector('footer'); if(ft) ft.style.display='none';
+  // Restore saved period preference, otherwise default to All Time
+  const dateEl=document.getElementById('dateFilter');
+  if(dateEl){
+    const savedPeriod = localStorage.getItem('jc_period') || 'maximum';
+    dateEl.value = savedPeriod;
+    // If saved value is invalid/not in list, fall back to maximum
+    if(!dateEl.value || dateEl.value==='') dateEl.value='maximum';
+  }
   const savedToken=localStorage.getItem('jc_tok');
   if(!savedToken||savedToken.trim()===''){showTokenSetup();return;}
   loadData();
@@ -1079,6 +1120,7 @@ function onDatePresetChange(){
   var sel=document.getElementById('dateFilter');
   var customDiv=document.getElementById('customDates');
   if(!sel||!customDiv) return;
+  localStorage.setItem('jc_period', sel.value); // Remember user's choice
   if(sel.value==='custom'){customDiv.style.display='flex';}
   else{customDiv.style.display='none';clearDataCache();loadData();}
 }
